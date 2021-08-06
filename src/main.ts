@@ -1,5 +1,5 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-
+import {StackCollection as Stack, QueueCollection as Queue} from "utils/StackNQueue"
 declare global {
   /*
     Example types, expand on these or remove them and add your own.
