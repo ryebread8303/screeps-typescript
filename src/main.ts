@@ -1,5 +1,6 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import {StackCollection as Stack, QueueCollection as Queue} from "utils/StackNQueue"
+import {RoomAgent} from "agents/room";
 declare global {
   /*
     Example types, expand on these or remove them and add your own.
@@ -28,7 +29,8 @@ declare global {
     }
   }
 }
-
+const simRoom = new RoomAgent();
+simRoom.execute();
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
