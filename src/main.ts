@@ -1,7 +1,7 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-import {StackCollection as Stack, QueueCollection as Queue} from "utils/StackNQueue"
-import {RoomAgent} from "agents/room";
-import { forEach } from "lodash";
+import { StackCollection as Stack, QueueCollection as Queue, StackCollection } from "utils/StackNQueue"
+import * as States from "utils/states";
+import { RoomAgent } from "agents/room";
 declare global {
   /*
     Example types, expand on these or remove them and add your own.
@@ -12,6 +12,9 @@ declare global {
     Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
   */
   // Memory extension samples
+  interface Creep {
+    state: Stack<States.State>;
+  }
   interface Memory {
     uuid: number;
     log: any;
@@ -22,31 +25,45 @@ declare global {
     room: string;
   }
 
+  interface Game {
+    Agents: RoomAgent[];
+  }
   // Syntax for adding proprties to `global` (ex "global.log")
   namespace NodeJS {
     interface Global {
       log: any;
       creeps: Creep[] | undefined;
-      roomAgents: RoomAgent[];
+      Agents: RoomAgent[];
     }
   }
 }
-for (const room of Object.keys(Game.rooms)){
-  global.roomAgents.push(new RoomAgent(room));
-}
-// Start of my main loop
-function main(): void {
-  for (const room of global.roomAgents) {
-    room.execute();
+if (global.Agents == undefined) {
+  global.Agents = [];
+  for (const room in Game.rooms){
+    global.Agents.push(new RoomAgent(room));
+    console.log('Pushed an agent to global.')
   }
-
 }
+console.log(`Current game tick is ${Game.time}`);
+
+
+//global.Agents.push(new RoomAgent('sim'));
+// Start of my main loop
+//function main(): void {}
 // End of my main loop
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
+  for (const room of global.Agents) {
+    room.execute();
+  }
+  for (const creepKey in Game.creeps) {
+    const creep = Game.creeps[creepKey];
+    creep.state.peek()?.execute();
+    console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
+  }
 
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
