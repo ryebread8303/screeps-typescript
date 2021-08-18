@@ -35,10 +35,12 @@ export class Traveling implements State{
             this.Actor.state.pop();
         } else {
             const startingPos = this.Actor.pos;
+            Game.map.visual.poly(this.Path.path);
             this.Actor.moveByPath(this.Path.path);
             const endingPos = this.Actor.pos;
             if (startingPos === endingPos) {
                 this.Path = PathFinder.search(this.Actor.pos, this.Target);
+                Game.map.visual.poly(this.Path.path);
                 this.Actor.moveByPath(this.Path.path);
             }
         }
