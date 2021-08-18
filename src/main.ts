@@ -15,6 +15,7 @@ declare global {
   interface Creep {
     state: Stack<States.State>;
   }
+
   interface Memory {
     uuid: number;
     log: any;

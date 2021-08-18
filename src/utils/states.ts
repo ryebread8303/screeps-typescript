@@ -18,31 +18,62 @@ export class Harvesting implements State{
 
     }
 }
-export class Traveling implements State{
+export class Traveling implements State {
     Target: RoomPosition;
     Range: number;
     Path: PathFinderPath;
     Actor: Creep;
     Incomplete: boolean = true;
-    constructor(traveler: Id<Creep>, goal: {pos: RoomPosition, range: number}){
+    constructor(traveler: Id<Creep>, goal: { pos: RoomPosition, range: number }) {
         this.Actor = <Creep>Game.getObjectById(traveler);
         this.Target = goal.pos;
         this.Range = goal.range;
-        this.Path = PathFinder.search(this.Actor.pos, goal);
+        this.Path = this.findPath();
     }
-    execute(){
-        if (this.Actor.pos == this.Target || this.Actor.pos.inRangeTo(this.Target.x,this.Target.y,this.Range)){
+    execute() {
+        if (this.Actor.pos == this.Target || this.Actor.pos.inRangeTo(this.Target.x, this.Target.y, this.Range)) {
             this.Actor.state.pop();
         } else {
             const startingPos = this.Actor.pos;
-            Game.map.visual.poly(this.Path.path);
+            Game.map.visual.poly(this.Path.path, { fill: 'aqua' });
             this.Actor.moveByPath(this.Path.path);
             const endingPos = this.Actor.pos;
             if (startingPos === endingPos) {
-                this.Path = PathFinder.search(this.Actor.pos, this.Target);
-                Game.map.visual.poly(this.Path.path);
+                Game.map.visual.poly(this.Path.path, { fill: 'aqua' });
                 this.Actor.moveByPath(this.Path.path);
             }
         }
+    }
+    findPath() {
+        this.Actor.say('Finding path.')
+        const roomName = this.Actor.room.name
+        return PathFinder.search(
+            this.Actor.pos,
+            { pos: this.Target, range: this.Range },
+            { roomCallback: (roomName) => {
+            const room = Game.rooms[roomName];
+            if(!room) { return false };
+            const costs = new PathFinder.CostMatrix;
+            room.find(FIND_STRUCTURES).forEach(function (struct) {
+                if (struct.structureType === STRUCTURE_ROAD) {
+                    // Favor roads over plain tiles
+                    costs.set(struct.pos.x, struct.pos.y, 1);
+                } else if (struct.structureType !== STRUCTURE_CONTAINER &&
+                    (struct.structureType !== STRUCTURE_RAMPART ||
+                        !struct.my)) {
+                    // Can't walk through non-walkable buildings
+                    costs.set(struct.pos.x, struct.pos.y, 0xff);
+                }
+            });
+
+            // Avoid creeps in the room
+            room.find(FIND_CREEPS).forEach(function (creep) {
+                costs.set(creep.pos.x, creep.pos.y, 0xff);
+            });
+
+            return costs;
+        }}
+        );
+
     }
 }

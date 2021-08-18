@@ -15,7 +15,6 @@ export class RoomAgent {
             this.Spawns[0].spawnCreep([WORK, WORK, MOVE], Guid.create().toString())
             for (const creep of this.Room.find(FIND_MY_CREEPS)) {
                 let harvester: Creep = creep;
-                console.log(`Current creep is ${harvester.name}`);
                 let state: StackCollection<States.State> = harvester.state;
                 if (state == undefined || state.size() == 0) {
                     harvester.state = new StackCollection<States.State>();
