@@ -50,6 +50,10 @@ export class Traveling implements State {
         return PathFinder.search(
             this.Actor.pos,
             { pos: this.Target, range: this.Range },
+            // this callback function sets the cost matrix
+            // for the room. This helps path around things.
+            // I might use this to help keep creep away from
+            // hazards later, or to keep creep on roads
             { roomCallback: (roomName) => {
             const room = Game.rooms[roomName];
             if(!room) { return false };
