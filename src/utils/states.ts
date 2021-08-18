@@ -20,19 +20,27 @@ export class Harvesting implements State{
 }
 export class Traveling implements State{
     Target: RoomPosition;
+    Range: number;
     Path: PathFinderPath;
     Actor: Creep;
     Incomplete: boolean = true;
     constructor(traveler: Id<Creep>, goal: {pos: RoomPosition, range: number}){
         this.Actor = <Creep>Game.getObjectById(traveler);
         this.Target = goal.pos;
+        this.Range = goal.range;
         this.Path = PathFinder.search(this.Actor.pos, goal);
     }
     execute(){
-        if (this.Actor.pos == this.Target ){
+        if (this.Actor.pos == this.Target || this.Actor.pos.inRangeTo(this.Target.x,this.Target.y,this.Range)){
             this.Actor.state.pop();
         } else {
+            const startingPos = this.Actor.pos;
             this.Actor.moveByPath(this.Path.path);
+            const endingPos = this.Actor.pos;
+            if (startingPos === endingPos) {
+                this.Path = PathFinder.search(this.Actor.pos, this.Target);
+                this.Actor.moveByPath(this.Path.path);
+            }
         }
     }
 }
