@@ -22,8 +22,7 @@ declare global {
   }
 
   interface CreepMemory {
-    role: string;
-    room: string;
+    body: string;
   }
 
   interface Game {

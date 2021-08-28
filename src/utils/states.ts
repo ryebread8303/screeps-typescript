@@ -1,7 +1,35 @@
 export interface State {
+    Actor: Creep;
     execute(): void;
 }
-
+export class Hauling implements State{
+    Actor: Creep;
+    constructor(hauler: Id<Creep>) {
+        this.Actor = <Creep>Game.getObjectById(hauler);
+    }
+    execute() {
+        if (this.Actor.store.getFreeCapacity() > 0) {
+            const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
+            const nearestDrop = this.Actor.pos.findClosestByRange(drops);
+            if (this.Actor.pickup(nearestDrop!) == ERR_NOT_IN_RANGE) {
+                this.Actor.state.push(new Traveling(this.Actor.id, {pos: nearestDrop!.pos, range: 1}))
+            }
+        } else { // if we can't pick up anymore energy, deliver it
+            const storage = this.Actor.room.find(FIND_MY_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_SPAWN ||
+                        structure.structureType == STRUCTURE_TOWER) &&
+                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                }
+            })
+            const nearestStorage = this.Actor.pos.findClosestByRange(storage);
+            if (this.Actor.transfer(nearestStorage!, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                this.Actor.state.push(new Traveling(this.Actor.id, {pos: nearestStorage!.pos, range: 1}))
+            }
+        }
+    }
+}
 export class Harvesting implements State{
     Actor: Creep;
     Target: Source;
@@ -35,11 +63,11 @@ export class Traveling implements State {
             this.Actor.state.pop();
         } else {
             const startingPos = this.Actor.pos;
-            Game.map.visual.poly(this.Path.path, { fill: 'aqua' });
+            new RoomVisual(this.Actor.room.name).poly(this.Path.path, { fill: 'aqua' });
             this.Actor.moveByPath(this.Path.path);
             const endingPos = this.Actor.pos;
             if (startingPos === endingPos) {
-                Game.map.visual.poly(this.Path.path, { fill: 'aqua' });
+                new RoomVisual(this.Actor.room.name).poly(this.Path.path, { fill: 'aqua' });
                 this.Actor.moveByPath(this.Path.path);
             }
         }

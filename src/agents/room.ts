@@ -11,8 +11,9 @@ export class RoomAgent {
             this.Sources = this.Room.find(FIND_SOURCES);
             this.Spawns = this.Room.find(FIND_MY_SPAWNS);
         }
-        execute () {
-            this.Spawns[0].spawnCreep([WORK, WORK, MOVE], Guid.create().toString())
+        execute() {
+            // need to add line to check proportion of workers to carriers and add carriers when needed
+            this.Spawns[0].spawnCreep([WORK, WORK, MOVE], Guid.create().toString(), { memory: { body: "worker" } })
             for (const creep of this.Room.find(FIND_MY_CREEPS)) {
                 let harvester: Creep = creep;
                 let state: StackCollection<States.State> = harvester.state;
