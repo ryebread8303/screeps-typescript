@@ -2,6 +2,7 @@ import { ErrorMapper } from "utils/ErrorMapper";
 import { StackCollection as Stack, QueueCollection as Queue, StackCollection } from "utils/StackNQueue"
 import * as States from "utils/states";
 import { RoomAgent } from "agents/room";
+console.log('Start of environment refresh');
 declare global {
   /*
     Example types, expand on these or remove them and add your own.
@@ -15,7 +16,9 @@ declare global {
   interface Creep {
     state: Stack<States.State>;
   }
-
+  interface Source {
+    harvestingSlots: number;
+  }
   interface Memory {
     uuid: number;
     log: any;
@@ -41,28 +44,24 @@ if (global.Agents == undefined) {
   global.Agents = [];
   for (const room in Game.rooms){
     global.Agents.push(new RoomAgent(room));
-    console.log('Pushed an agent to global.')
+    console.log('Pushed an agent to global.');
   }
 }
-console.log(`Current game tick is ${Game.time}`);
-
-
-//global.Agents.push(new RoomAgent('sim'));
-// Start of my main loop
-//function main(): void {}
-// End of my main loop
-
+console.log('End of environment refresh');
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
+  console.log('Start of main loop');
   console.log(`Current game tick is ${Game.time}`);
   for (const room of global.Agents) {
     room.execute();
   }
   for (const creepKey in Game.creeps) {
     const creep = Game.creeps[creepKey];
-    creep.state.peek()?.execute();
-    console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
+    if (creep.spawning == false) {
+      creep.state.peek()?.execute();
+      console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
+    }
   }
 
   // Automatically delete memory of missing creeps
@@ -71,4 +70,5 @@ export const loop = ErrorMapper.wrapLoop(() => {
       delete Memory.creeps[name];
     }
   }
+  console.log('End of main loop\r\n');
 });
