@@ -9,10 +9,17 @@ export class Hauling implements State{
     }
     execute() {
         if (this.Actor.store.getFreeCapacity() > 0) {
-            const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
-            const nearestDrop = this.Actor.pos.findClosestByRange(drops);
+            //const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
+            const nearestDrop = this.Actor.pos.findClosestByRange(FIND_DROPPED_RESOURCES, { filter: {resourceType: RESOURCE_ENERGY} });
+            if (nearestDrop == null) {
+                this.Actor.say("No rsc");
+                return;
+            }
             if (this.Actor.pickup(nearestDrop!) == ERR_NOT_IN_RANGE) {
-                this.Actor.state.push(new Traveling(this.Actor.id, {pos: nearestDrop!.pos, range: 1}))
+                this.Actor.say("mv. t rsc")
+                console.log(`Hauler ${this.Actor.name} found energy at ${nearestDrop.pos}`)
+                this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestDrop.pos, range: 1 }))
+                this.Actor.state.peek()?.execute();
             }
         } else { // if we can't pick up anymore energy, deliver it
             const storage = this.Actor.room.find(FIND_MY_STRUCTURES, {
@@ -25,7 +32,9 @@ export class Hauling implements State{
             })
             const nearestStorage = this.Actor.pos.findClosestByRange(storage);
             if (this.Actor.transfer(nearestStorage!, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                this.Actor.say("mv. t str")
                 this.Actor.state.push(new Traveling(this.Actor.id, {pos: nearestStorage!.pos, range: 1}))
+                this.Actor.state.peek()?.execute();
             }
         }
     }
@@ -46,6 +55,11 @@ export class Harvesting implements State{
 
     }
 }
+/**
+ * A state object that handles moving a creep to where it needs to be.
+ * @param traveler the ID of the creep that will move
+ * @param goal An object containing the pos of the target and the range we need to be in.
+ */
 export class Traveling implements State {
     Target: RoomPosition;
     Range: number;
@@ -61,19 +75,21 @@ export class Traveling implements State {
     execute() {
         if (this.Actor.pos == this.Target || this.Actor.pos.inRangeTo(this.Target.x, this.Target.y, this.Range)) {
             this.Actor.state.pop();
+            console.log(`Creep ${this.Actor.name} popped Traveling`)
         } else {
+            console.log(`Creep ${this.Actor.name} traveling to ${this.Target}`)
             const startingPos = this.Actor.pos;
-            new RoomVisual(this.Actor.room.name).poly(this.Path.path, { fill: 'aqua' });
+            new RoomVisual(this.Actor.room.name).poly(this.Path.path);
             this.Actor.moveByPath(this.Path.path);
             const endingPos = this.Actor.pos;
             if (startingPos === endingPos) {
-                new RoomVisual(this.Actor.room.name).poly(this.Path.path, { fill: 'aqua' });
+                new RoomVisual(this.Actor.room.name).poly(this.Path.path);
                 this.Actor.moveByPath(this.Path.path);
             }
         }
     }
     findPath() {
-        this.Actor.say('Finding path.')
+        this.Actor.say('pth.')
         const roomName = this.Actor.room.name
         return PathFinder.search(
             this.Actor.pos,

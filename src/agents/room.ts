@@ -57,6 +57,7 @@ export class RoomAgent {
 
         const creepBodies = {worker: 0, carrier: 0};
         creepBodies['worker'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'worker')).length
+        creepBodies['carrier'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'carrier')).length
         console.log(`Worker Count: ${creepBodies['worker']}`);
         console.log(`Carrier Count: ${creepBodies['carrier']}`);
         if (creepBodies == undefined) {

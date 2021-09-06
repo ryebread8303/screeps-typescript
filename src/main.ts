@@ -60,7 +60,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     const creep = Game.creeps[creepKey];
     if (creep.spawning == false) {
       creep.state.peek()?.execute();
-      console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
+      //console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
     }
   }
 
