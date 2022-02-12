@@ -26,6 +26,7 @@ declare global {
 
   interface CreepMemory {
     body: string;
+    job?: string;
   }
 
   interface Game {

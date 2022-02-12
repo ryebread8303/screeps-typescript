@@ -2,6 +2,20 @@ export interface State {
     Actor: Creep;
     execute(): void;
 }
+export class Upgrading implements State{
+    Actor: Creep;
+    Controller: StructureController;
+    constructor(upgrader: Id<Creep>) {
+        this.Actor = <Creep>Game.getObjectById(upgrader);
+        this.Controller = <StructureController>this.Actor.room.controller;
+    }
+    execute() {
+        if (this.Actor.upgradeController(this.Controller) == ERR_NOT_IN_RANGE) {
+            this.Actor.state.push(new Traveling(this.Actor.id, { pos: this.Controller.pos, range: 1 }));
+            this.Actor.state.peek()?.execute();
+        }
+    }
+}
 export class Hauling implements State{
     Actor: Creep;
     constructor(hauler: Id<Creep>) {
