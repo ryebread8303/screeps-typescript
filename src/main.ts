@@ -30,13 +30,13 @@ declare global {
   }
 
   interface Game {
-    Agents: RoomAgent[];
+    //Agents: RoomAgent[];
   }
   // Syntax for adding proprties to `global` (ex "global.log")
   namespace NodeJS {
     interface Global {
       log: any;
-      creeps: Creep[] | undefined;
+      CreepObjects: Creep[];
       Agents: RoomAgent[];
     }
   }
@@ -45,24 +45,32 @@ if (global.Agents == undefined) {
   global.Agents = [];
   for (const room in Game.rooms){
     global.Agents.push(new RoomAgent(room));
-    console.log('Pushed an agent to global.');
+    console.log('\tPushed an agent to global.');
   }
 }
+if (global.CreepObjects == undefined) {
+  global.CreepObjects = [];
+  for (const creepkey in Game.creeps) {
+    const creep = Game.creeps[creepkey];
+    global.CreepObjects.push(creep);
+    console.log('\tPushed a creep to global')
+  }
+}
+for (const room of global.Agents) {
+  room.assignStates();
+}
+
 console.log('End of environment refresh');
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log('Start of main loop');
-  console.log(`Current game tick is ${Game.time}`);
-  for (const creepKey in Game.creeps) {
-    const creep = Game.creeps[creepKey];
-    console.log(console.log(`Creep ${creep.name} started the loop with no state.`));
-  }
+  console.log(`\tCurrent game tick is ${Game.time}`);
   for (const room of global.Agents) {
     room.execute();
   }
-  for (const creepKey in Game.creeps) {
-    const creep = Game.creeps[creepKey];
+  for (const creepkey in global.CreepObjects) {
+    const creep = global.CreepObjects[creepkey];
     if (creep.spawning == false) {
       creep.state.peek()?.execute();
     }
