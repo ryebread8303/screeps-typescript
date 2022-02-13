@@ -54,6 +54,10 @@ console.log('End of environment refresh');
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log('Start of main loop');
   console.log(`Current game tick is ${Game.time}`);
+  for (const creepKey in Game.creeps) {
+    const creep = Game.creeps[creepKey];
+    console.log(console.log(`Creep ${creep.name} started the loop with no state.`));
+  }
   for (const room of global.Agents) {
     room.execute();
   }
@@ -61,7 +65,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
     const creep = Game.creeps[creepKey];
     if (creep.spawning == false) {
       creep.state.peek()?.execute();
-      //console.log(`Creep ${creep.name} has ${creep.state.size()} states stacked.`);
     }
   }
 

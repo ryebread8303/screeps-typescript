@@ -76,18 +76,21 @@ export class RoomAgent {
         }
         for (const creep of this.Room.find(FIND_MY_CREEPS)) {
             let state: StackCollection<States.State> = creep.state;
-            if (state == undefined || state.size() == 0) {
+            //console.log(`Creep ${creep.name} has ${state.size()} states stacked.`);
+            if (state == undefined) {
                 if (creep.memory.body == 'worker') {
                     switch (creep.memory.job) {
                         case 'upgrading':
                             creep.state = new StackCollection<States.State>();
                             creep.memory.job = 'upgrading';
                             creep.state.push(new States.Upgrading(creep.id));
+                            console.log("Pushed upgrading state.")
                             break;
                         case 'harvesting':
                             creep.state = new StackCollection<States.State>();
                             creep.memory.job = 'harvesting'
                             creep.state.push(new States.Harvesting(creep.id, this.Sources[0]));
+                            console.log("Pushed harvesting state.")
                             break;
                         default: break;
                     }
