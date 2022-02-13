@@ -55,16 +55,23 @@ export class RoomAgent {
     execute() {
         // need to add line to check proportion of workers to carriers and add carriers when needed
 
-        const creepBodies = {worker: 0, carrier: 0};
-        creepBodies['worker'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'worker')).length
-        creepBodies['carrier'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'carrier')).length
-        console.log(`Worker Count: ${creepBodies['worker']}`);
-        console.log(`Carrier Count: ${creepBodies['carrier']}`);
+    }
+    assignStates() {
+        console.log("Assigning states to creeps.")
+        const creepBodies = { worker: 0, carrier: 0 };
+        const creepJobs = {harvesting: 0, hauling: 0, upgrading: 0}
+        creepBodies['worker'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'worker')).length;
+        creepBodies['carrier'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.body == 'carrier')).length;
+        creepJobs['harvesting'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.job == 'harvesting')).length;
+        creepJobs['hauling'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.job == 'hauling')).length;
+        creepJobs['upgrading'] = (_.filter(this.Room.find(FIND_MY_CREEPS), (creep) => creep.memory.job == 'upgrading')).length;
+        console.log(`\tWorker Count: ${creepBodies['worker']}`);
+        console.log(`\tCarrier Count: ${creepBodies['carrier']}`);
         if (creepBodies == undefined) {
             let creepBodies = { worker: 0 };
         }
         if (this.Spawns[0].spawning == null) {
-            if (creepBodies['worker'] < this.harvestingSlots && (creepBodies['worker'] < creepBodies['carrier'])) {
+            if (creepBodies['worker'] < 6 && (creepBodies['worker'] < creepBodies['carrier']) || (creepBodies.carrier + creepBodies.worker == 0)) {
                 this.spawnWorker();
             } else {
                 this.spawnHauler();
@@ -72,17 +79,41 @@ export class RoomAgent {
         }
         for (const creep of this.Room.find(FIND_MY_CREEPS)) {
             let state: StackCollection<States.State> = creep.state;
-            if (state == undefined || state.size() == 0) {
+            //console.log(`Creep ${creep.name} has ${state.size()} states stacked.`);
+            if (state == undefined) {
                 if (creep.memory.body == 'worker') {
-                    creep.state = new StackCollection<States.State>();
-                    creep.state.push(new States.Harvesting(creep.id, this.Sources[0]));
+                    switch (creep.memory.job) {
+                        case 'upgrading':
+                            creep.state = new StackCollection<States.State>();
+                            creep.memory.job = 'upgrading';
+                            creep.state.push(new States.Upgrading(creep.id));
+                            console.log("\tPushed upgrading state.")
+                            break;
+                        case 'harvesting':
+                            creep.state = new StackCollection<States.State>();
+                            creep.memory.job = 'harvesting'
+                            creep.state.push(new States.Harvesting(creep.id, this.Sources[0]));
+                            console.log("\tPushed harvesting state.")
+                            break;
+                        default: break;
+                    }
+                    if (creepJobs.harvesting < creepJobs.upgrading) {
+                        creep.state = new StackCollection<States.State>();
+                        creep.memory.job = 'harvesting';
+                        creep.state.push(new States.Harvesting(creep.id, this.Sources[0]));
+                    } else {
+                        creep.state = new StackCollection<States.State>();
+                        creep.memory.job = 'upgrading';
+                        creep.state.push(new States.Upgrading(creep.id));
+                    }
                 }
                 if (creep.memory.body == 'carrier') {
                     creep.state = new StackCollection<States.State>();
-                    creep.state.push(new States.Hauling(creep.id))
+                    creep.state.push(new States.Hauling(creep.id));
                 }
             }
         }
+        console.log("Done assigning states to creeps.")
     }
     spawnWorker() {
         console.log('spawning a worker');

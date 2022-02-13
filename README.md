@@ -15,3 +15,9 @@ My final architecture will look something like the following:
 - Administrator: Object that checks the states of each room, and coordinates the rooms to share resources.
 - RoomAgent: Object that runs the activities of each room.
 - Creep States: Objects that handle actions of an individual creep.
+
+## TODO
+* Haulers should start a delivery if there are no more resources to pick up
+* need to upgrade the room controller
+* need to defend the room
+* need to colonize other rooms
