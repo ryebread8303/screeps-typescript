@@ -18,24 +18,27 @@ export class Upgrading implements State{
 }
 export class Hauling implements State{
     Actor: Creep;
+    Delivering: Boolean;
     constructor(hauler: Id<Creep>) {
         this.Actor = <Creep>Game.getObjectById(hauler);
+        this.Delivering = false;
     }
     execute() {
-        if (this.Actor.store.getFreeCapacity() > 0) {
-            //const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
-            const nearestDrop = this.Actor.pos.findClosestByRange(FIND_DROPPED_RESOURCES, { filter: {resourceType: RESOURCE_ENERGY} });
-            if (nearestDrop == null) {
-                this.Actor.say("No rsc");
-                return;
-            }
-            if (this.Actor.pickup(nearestDrop!) == ERR_NOT_IN_RANGE) {
-                this.Actor.say("mv. t rsc")
-                console.log(`Hauler ${this.Actor.name} found energy at ${nearestDrop.pos}`)
-                this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestDrop.pos, range: 1 }))
-                this.Actor.state.peek()?.execute();
-            }
-        } else { // if we can't pick up anymore energy, deliver it
+        //if we have no free storage, we should be delivering
+        if (this.Actor.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
+        {
+            this.Delivering = true;
+        }
+        //if there is nothing for us to pick up, we should be delivering
+        //const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
+        const nearestDrop = this.Actor.pos.findClosestByRange(FIND_DROPPED_RESOURCES, { filter: {resourceType: RESOURCE_ENERGY} });
+        if (nearestDrop == null) {
+            this.Actor.say("No rsc");
+            this.Delivering = true;
+            return;
+        }
+        if (this.Delivering)
+        {
             const storage = this.Actor.room.find(FIND_MY_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
@@ -45,10 +48,31 @@ export class Hauling implements State{
                 }
             })
             const nearestStorage = this.Actor.pos.findClosestByRange(storage);
-            if (this.Actor.transfer(nearestStorage!, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                this.Actor.say("mv. t str")
-                this.Actor.state.push(new Traveling(this.Actor.id, {pos: nearestStorage!.pos, range: 1}))
-                this.Actor.state.peek()?.execute();
+            switch (this.Actor.transfer(nearestStorage!, RESOURCE_ENERGY))
+            {
+                case ERR_NOT_IN_RANGE:
+                    this.Actor.say("mv. t str")
+                    this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestStorage!.pos, range: 1 }))
+                    this.Actor.state.peek()?.execute();
+                    break;
+                case OK:
+                    this.Actor.say("Delivered");
+                    this.Delivering = false;
+                    break;
+            }
+        } else // if we aren't delivering, we need to be picking up dropped energy
+        {
+            switch (this.Actor.pickup(nearestDrop!))
+            {
+                case ERR_NOT_IN_RANGE:
+                    this.Actor.say("mv. t rsc")
+                    console.log(`Hauler ${this.Actor.name} found energy at ${nearestDrop.pos}`)
+                    this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestDrop.pos, range: 1 }))
+                    this.Actor.state.peek()?.execute();
+                    break;
+                case ERR_FULL:
+                    this.Delivering = true;
+                    break;
             }
         }
     }
