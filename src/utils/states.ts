@@ -1,45 +1,63 @@
-export interface State {
-    Actor: Creep;
+import { CreepAgent } from "agents/creep";
+
+export interface IState {
+    Agent: CreepAgent;
     execute(): void;
 }
-export class Upgrading implements State{
-    Actor: Creep;
+
+abstract class State implements IState {
+    Agent: CreepAgent;
+    constructor(agent: CreepAgent) {
+        this.Agent = agent;
+    }
+    getCreep() : Creep {
+        return <Creep>Game.getObjectById(this.Agent.CreepID);
+    }
+    execute(): void {
+
+    }
+}
+
+export class Idle extends State implements IState { }
+
+export class Upgrading extends State implements IState{
     Controller: StructureController;
-    constructor(upgrader: Id<Creep>) {
-        this.Actor = <Creep>Game.getObjectById(upgrader);
-        this.Controller = <StructureController>this.Actor.room.controller;
+    constructor(agent: CreepAgent) {
+        super(agent);
+        this.Controller = <StructureController>this.getCreep().room.controller;
     }
     execute() {
-        if (this.Actor.upgradeController(this.Controller) == ERR_NOT_IN_RANGE) {
-            this.Actor.state.push(new Traveling(this.Actor.id, { pos: this.Controller.pos, range: 1 }));
-            this.Actor.state.peek()?.execute();
+        const creep = this.getCreep()
+        if (creep.upgradeController(this.Controller) == ERR_NOT_IN_RANGE) {
+            this.Agent.StateStack.push(new Traveling(this.Agent, { pos: this.Controller.pos, range: 1 }));
+            this.Agent.StateStack.peek()?.execute();
         }
     }
 }
-export class Hauling implements State{
-    Actor: Creep;
+export class Hauling extends State implements IState{
     Delivering: Boolean;
-    constructor(hauler: Id<Creep>) {
-        this.Actor = <Creep>Game.getObjectById(hauler);
+    constructor(agent: CreepAgent) {
+        super(agent);
         this.Delivering = false;
     }
     execute() {
+        const creep = this.getCreep()
         //if we have no free storage, we should be delivering
-        if (this.Actor.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
+        if (creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0)
         {
             this.Delivering = true;
         }
         //if there is nothing for us to pick up, we should be delivering
-        //const drops = this.Actor.room.find(FIND_DROPPED_RESOURCES);
-        const nearestDrop = this.Actor.pos.findClosestByRange(FIND_DROPPED_RESOURCES, { filter: {resourceType: RESOURCE_ENERGY} });
+        //const drops = creep.room.find(FIND_DROPPED_RESOURCES);
+        const nearestDrop = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, { filter: {resourceType: RESOURCE_ENERGY} });
         if (nearestDrop == null) {
-            this.Actor.say("No rsc");
+            creep.say("No rsc");
             this.Delivering = true;
             return;
         }
         if (this.Delivering)
         {
-            const storage = this.Actor.room.find(FIND_MY_STRUCTURES, {
+            const storage = creep.room.find(FIND_MY_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
@@ -47,28 +65,28 @@ export class Hauling implements State{
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
             })
-            const nearestStorage = this.Actor.pos.findClosestByRange(storage);
-            switch (this.Actor.transfer(nearestStorage!, RESOURCE_ENERGY))
+            const nearestStorage = creep.pos.findClosestByRange(storage);
+            switch (creep.transfer(nearestStorage!, RESOURCE_ENERGY))
             {
                 case ERR_NOT_IN_RANGE:
-                    this.Actor.say("mv. t str")
-                    this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestStorage!.pos, range: 1 }))
-                    this.Actor.state.peek()?.execute();
+                    creep.say("mv. t str")
+                    this.Agent.StateStack.push(new Traveling(this.Agent, { pos: nearestStorage!.pos, range: 1 }))
+                    this.Agent.StateStack.peek()?.execute();
                     break;
                 case OK:
-                    this.Actor.say("Delivered");
+                    creep.say("Delivered");
                     this.Delivering = false;
                     break;
             }
         } else // if we aren't delivering, we need to be picking up dropped energy
         {
-            switch (this.Actor.pickup(nearestDrop!))
+            switch (creep.pickup(nearestDrop!))
             {
                 case ERR_NOT_IN_RANGE:
-                    this.Actor.say("mv. t rsc")
-                    console.log(`Hauler ${this.Actor.name} found energy at ${nearestDrop.pos}`)
-                    this.Actor.state.push(new Traveling(this.Actor.id, { pos: nearestDrop.pos, range: 1 }))
-                    this.Actor.state.peek()?.execute();
+                    creep.say("mv. t rsc")
+                    console.log(`Hauler ${creep.name} found energy at ${nearestDrop.pos}`)
+                    this.Agent.StateStack.push(new Traveling(this.Agent, { pos: nearestDrop.pos, range: 1 }))
+                    this.Agent.StateStack.peek()?.execute();
                     break;
                 case ERR_FULL:
                     this.Delivering = true;
@@ -77,18 +95,17 @@ export class Hauling implements State{
         }
     }
 }
-export class Harvesting implements State{
-    Actor: Creep;
+export class Harvesting extends State implements IState{
     Target: Source;
-    constructor(harvester: Id<Creep>, source: Source) {
-        this.Actor = <Creep>Game.getObjectById(harvester);
+    constructor(agent: CreepAgent, source: Source) {
+        super(agent);
         this.Target = source;
     }
     execute() {
-        const HarvestReturn = this.Actor.harvest(this.Target);
+        const HarvestReturn = this.getCreep().harvest(this.Target);
         if (HarvestReturn == ERR_NOT_IN_RANGE) {
-            this.Actor.state.push(new Traveling(this.Actor.id, { pos: this.Target.pos, range: 1 }));
-            this.Actor.state.peek()?.execute();
+            this.Agent.StateStack.push(new Traveling(this.Agent, { pos: this.Target.pos, range: 1 }));
+            this.Agent.StateStack.peek()?.execute();
         }
 
     }
@@ -98,39 +115,40 @@ export class Harvesting implements State{
  * @param traveler the ID of the creep that will move
  * @param goal An object containing the pos of the target and the range we need to be in.
  */
-export class Traveling implements State {
+export class Traveling extends State implements IState {
     Target: RoomPosition;
     Range: number;
     Path: PathFinderPath;
-    Actor: Creep;
     Incomplete: boolean = true;
-    constructor(traveler: Id<Creep>, goal: { pos: RoomPosition, range: number }) {
-        this.Actor = <Creep>Game.getObjectById(traveler);
+    constructor(agent: CreepAgent, goal: { pos: RoomPosition, range: number }) {
+        super(agent);
         this.Target = goal.pos;
         this.Range = goal.range;
         this.Path = this.findPath();
     }
     execute() {
-        if (this.Actor.pos == this.Target || this.Actor.pos.inRangeTo(this.Target.x, this.Target.y, this.Range)) {
-            this.Actor.state.pop();
-            console.log(`Creep ${this.Actor.name} popped Traveling`)
+        const creep = this.getCreep();
+        if (creep.pos == this.Target || creep.pos.inRangeTo(this.Target.x, this.Target.y, this.Range)) {
+            this.Agent.StateStack.pop();
+            console.log(`Creep ${creep.name} popped Traveling`)
         } else {
-            console.log(`Creep ${this.Actor.name} traveling to ${this.Target}`)
-            const startingPos = this.Actor.pos;
-            new RoomVisual(this.Actor.room.name).poly(this.Path.path);
-            this.Actor.moveByPath(this.Path.path);
-            const endingPos = this.Actor.pos;
+            console.log(`Creep ${creep.name} traveling to ${this.Target}`)
+            const startingPos = creep.pos;
+            new RoomVisual(creep.room.name).poly(this.Path.path);
+            creep.moveByPath(this.Path.path);
+            const endingPos = creep.pos;
             if (startingPos === endingPos) {
-                new RoomVisual(this.Actor.room.name).poly(this.Path.path);
-                this.Actor.moveByPath(this.Path.path);
+                new RoomVisual(creep.room.name).poly(this.Path.path);
+                creep.moveByPath(this.Path.path);
             }
         }
     }
     findPath() {
-        this.Actor.say('pth.')
-        const roomName = this.Actor.room.name
+        const creep = this.getCreep();
+        creep.say('pth.')
+        const roomName = creep.room.name
         return PathFinder.search(
-            this.Actor.pos,
+            creep.pos,
             { pos: this.Target, range: this.Range },
             // this callback function sets the cost matrix
             // for the room. This helps path around things.
